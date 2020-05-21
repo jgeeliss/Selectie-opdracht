@@ -42,7 +42,6 @@ const fetchAllJson = async _ => {
 		}		
 		nexturl = jsonUnitObject.$$meta.next;		 
 		nextResultsUrl =  url + nexturl;
-		console.log(organUnits.length);
 	}
 
 	nextResultsUrl= url + "/sam/organisationalunits/relations?type=IS_PART_OF&limit=5000&keyOffset=2018-10-06T21%3A34%3A07.484Z,1c5ecc04-7045-4863-9129-8a6f323564f4"
@@ -50,19 +49,39 @@ const fetchAllJson = async _ => {
 
 	while (nexturl != undefined) {
 			const jsonRelationObject = await getJson(nextResultsUrl);
-			console.log(jsonRelationObject.results[1].href + " by name " + jsonRelationObject.results[1].$$expanded.$$displayName);
-			console.log(jsonRelationObject.$$meta.next);
-
+			console.log(jsonRelationObject.results[1].$$expanded.from.href + " -> " + jsonRelationObject.results[1].$$expanded.to.href);
+			
 			for (var i = 0, len = Object.keys(jsonRelationObject.results).length; i < len; i++) {
 				const rel = new Object();
-				rel.from = jsonRelationObject.results[i].href;
-				rel.to = jsonRelationObject.results[i].$$expanded.type;	
+				rel.from = jsonRelationObject.results[i].$$expanded.from.href;
+				rel.to = jsonRelationObject.results[i].$$expanded.to.href;	
 				relationships.push(rel);				
 			}
 			
 			nexturl = jsonRelationObject.$$meta.next;		 
 			nextResultsUrl =  url + nexturl;	
-			console.log(relationships.length);
+	}
+
+	//USE RELATIONSHIPS TO FILL IN PARENTS
+	console.log(organUnits.length);
+	console.log(relationships.length);
+	organUnits.forEach(
+		function lookupParts(unit) {
+			relationships.forEach(
+				function loopOverRelationships(relation) {
+					if (unit.href == relation.from) {
+						unit.parents.push(relation.to);	
+					}
+				}
+			)
+		}
+	)
+
+	//CHECK IF PARENTS HAVE BEEN FOUND
+	for (var i = 0; i < 10000; i++) {
+		if (organUnits.parents != undefined) {		
+			 console.log(organUnits[i]);
+		 }
 	}
 
 	console.log("End")	
