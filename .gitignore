@@ -1,2 +1,6 @@
 *.conf
 https.js
+findChildrenOfNode.js
+writefile.js
+ResultFile.txt
+fetchJsonArray.js

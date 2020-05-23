@@ -25,6 +25,8 @@ let topOrganUnits = [];
 const fetchAllJson = async _ => {
 	console.log('Start')
 
+	function arrayRemove(arr, value) { return arr.filter(function(ele){ return ele != value; });} 
+
 	let nextResultsUrl= url + "/sam/organisationalunits?limit=5000"
 	//let nextResultsUrl= url + "/sam/organisationalunits?limit=5000&keyOffset=2018-10-06T21%3A22%3A36.947Z,93b5c620-6f84-4c84-b78e-233a07f0732c"
 	var nexturl = "";
@@ -38,7 +40,6 @@ const fetchAllJson = async _ => {
 			OU.href = jsonUnitObject.results[i].href;
 			OU.type = jsonUnitObject.results[i].$$expanded.type;
 			OU.name = jsonUnitObject.results[i].$$expanded.$$displayName;
-			OU.parents = [];
 			organUnits.push(OU);			
 		}		
 		nexturl = jsonUnitObject.$$meta.next;		 
@@ -63,19 +64,22 @@ const fetchAllJson = async _ => {
 			nexturl = jsonRelationObject.$$meta.next;		 
 			nextResultsUrl =  url + nexturl;	
 	}
-	console.log(organUnits.length);
-	console.log(relationships.length);
+	console.log("number of OUs: " + organUnits.length);
+	console.log("number of relationships: " + relationships.length);
 
 
 	//FIND TOP OU's
 	topNodeFound=0;
-	let isTop = true; //node is top until proven otherwise
+	let isTop;
 	check=0;
 
-	nonTopOU = [  'BOARDING',	'SCHOOL',	'SCHOOLENTITY',	'CLASS',	'TEACHER_GROUP',	'SCHOOLENTITY_CLUSTER']
+	//nonTopOU = [ 'CLASS',	'TEACHER_GROUP',	'SCHOOLENTITY_CLUSTER']
 
+	let organUnitsReduced = organUnits;
+	
 	for (var i = 0; i < organUnits.length; i++){
-		//if (nonTopOU.includes(organUnits[i].type)) {break;}	
+		if (organUnits[i].type=="CLASS") {break;}	//Classes can never be top => performance
+		isTop = true; //node is always a top node until proven otherwise
 		for (var y = 0; y < relationships.length; y++){
 			if (organUnits[i].href == relationships[y].from) {
 				isTop = false;
@@ -85,15 +89,15 @@ const fetchAllJson = async _ => {
 		if (check%1000==0){console.log("checked " + check/1000 + " thousand OUs");}
 		if (isTop==true) {
 			topOrganUnits.push(organUnits[i]);
-			topNodeFound++;
-			console.log("found " + topNodeFound + " top parents");
-			isTop = true;
+			topNodeFound++;			
+			organUnitsReduced = organUnitsReduced.filter(function(value, index, arr){ return value != organUnits[i];}); //remove top OUs from array
+			//arrayRemove(organUnits, organUnits[i]); 
 		}
-		//if (topNodeFound%1000==0) {console.log("checked " + topNodeFound/1000 + " billion parents");}	
 	}
 	console.log("number of tops = " + topOrganUnits.length);
+	console.log("number of OUs remaining = " + organUnitsReduced.length);
 	
-	for (var i = 0; i < 10; i++) {console.log(topOrganUnits[i]);}
+	for (var i = 0; i < 3; i++) {console.log(topOrganUnits[i]);}
 
 	//find types of top OU
 	allOUtypes=[]		
@@ -103,36 +107,54 @@ const fetchAllJson = async _ => {
 	let uniqueOUtypes = [...new Set(allOUtypes)];
 	console.log(uniqueOUtypes)
 
-	/*
-	//USE RELATIONSHIPS TO FILL IN PARENTS
-	numberOfParentsAdded = 0;
+	//MAKE TREE STRUCTURE RECURSIVELY
 	
-	for (var i = 0; i < organUnits.length; i++){
-		for (var y = 0; y < relationships.length; y++){
-			if (organUnits[i].href == relationships[y].from) {
-				organUnits[i].parents.push(relationships[y].to);
-				numberOfParentsAdded++;	
-			}		
-			check++;	
-			if (check%1000000000==0){console.log("checked " + check/1000000000 + " billion parents");}		
+	/*let dummyList = [];
+
+	dummyList.push(topOrganUnits.find(function(element) {
+		return element.href == "/sam/organisationalunits/44c8708d-0993-4ca5-ba7f-c9c4c807cdc5";
+	  }))
+
+	  
+	for (var e = 0; e < 10; e++){
+		dummyList.push(topOrganUnits[e]);
+	}
+*/
+	let childrenFound = 0;
+	let resultArray = [];
+
+	for (var e = 0; e < topOrganUnits.length; e++){
+		findChildrenOfNode(topOrganUnits[e]);
+	}
+
+
+
+	function findChildrenOfNode(oneNode){
+		console.log(oneNode);
+		resultArray.push(oneNode);
+		for (var x = 0; x < relationships.length; x++){
+			if (oneNode.href == relationships[x].to) {
+				var oneChild = organUnitsReduced.filter(obj => {
+					return obj.href === relationships[x].from
+				  })
+				childrenFound++;
+				//organUnitsReduced = organUnitsReduced.filter(function(value, index, arr){ return value != oneChild;});
+				findChildrenOfNode(oneChild);				
+			}	
 		}	
 	}
-	console.log("Added " + numberOfParentsAdded + " parents");
-	
+	console.log("children found :" + childrenFound);	
+	console.log("OUs left in array :" + organUnitsReduced.length);
 
-	//CHECK IF PARENTS HAVE BEEN ADDED
-	numberOfParentsFound = 0;
-	for (var i = 0; i < organUnits.length; i++) {
-		if (organUnits[i].parents.length >0) {		
-			numberOfParentsFound++;				
-		}
-	}
-	console.log("Found " + numberOfParentsFound + " parents");
+	/*
+	fs.writeFile('ResultFile.txt', resultArray.forEach, function (err) {
+		if (err) return console.log(err);
+  	});
 	*/
 
 	console.log("End");	
-	var end = new Date() - start
-	console.log('Execution time: %dms', end)
+	var timePassed = new Date() - start
+	console.log('Execution time: %dms', timePassed)
   }
 
 

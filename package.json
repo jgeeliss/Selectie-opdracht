@@ -1,0 +1,16 @@
+{
+  "name": "selectie-opdracht",
+  "version": "1.0.0",
+  "description": "Selectie opdracht KOV",
+  "main": "fetchJson.js",
+  "scripts": {
+    "start": "node fetchJson.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/jgeeliss/Selectie-opdracht/"
+  },
+  "author": "Jesse Geelissen <jgeeliss@gmail.com>",
+  "license": "ISC"
+}
