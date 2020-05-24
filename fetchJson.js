@@ -1,5 +1,6 @@
 const fetch = require("node-fetch");
 const fs = require("fs");
+const utilities = require("./utilities");
 
 try {
     var url = fs.readFileSync('./url.conf', 'utf8');
@@ -21,17 +22,45 @@ let organUnits = [];
 let relationships = [];
 let topOrganUnits = [];
 
-
 const fetchAllJson = async _ => {
 	console.log('Start')
 
 	function arrayRemove(arr, value) { return arr.filter(function(ele){ return ele != value; });} 
 
+	//DUMMY DATA TO FIX TREE STRUCTURE
+	for (var i = 0; i < 9; i++) { 
+		const OU = new Object();
+		OU.href = "href" + i;
+		OU.type = "type" + i;
+		OU.name = "Name" + i;
+		organUnits.push(OU);
+	}
+
+	for (var i = 0; i < 3; i++) { 
+		for (var y = 3; y < 6; y++) { 
+			const rel = new Object();
+			rel.from = "href" + y;
+			rel.to = "href" + i;
+			relationships.push(rel);
+		}
+	}
+
+	for (var i = 3; i < 6; i++) { 
+		for (var y = 6; y < 9; y++) { 
+			const rel = new Object();
+			rel.from = "href" + y;
+			rel.to = "href" + i;
+			relationships.push(rel);
+		}
+	}
+
+/*	
 	let nextResultsUrl= url + "/sam/organisationalunits?limit=5000"
 	//let nextResultsUrl= url + "/sam/organisationalunits?limit=5000&keyOffset=2018-10-06T21%3A22%3A36.947Z,93b5c620-6f84-4c84-b78e-233a07f0732c"
+	//let nextResultsUrl= url + "/sam/organisationalunits?limit=5000&keyOffset=2018-09-26T12%3A02%3A00.531Z,e4702e9d-d145-4d24-915d-476059de91d3"
 	var nexturl = "";
 
-	while (nexturl != undefined) {
+ 	while (nexturl != undefined) {
 		const jsonUnitObject = await getJson(nextResultsUrl);
 		console.log(jsonUnitObject.results[0].href + " by name " + jsonUnitObject.results[0].$$expanded.$$displayName);
 		
@@ -63,10 +92,9 @@ const fetchAllJson = async _ => {
 			
 			nexturl = jsonRelationObject.$$meta.next;		 
 			nextResultsUrl =  url + nexturl;	
-	}
+	} */
 	console.log("number of OUs: " + organUnits.length);
 	console.log("number of relationships: " + relationships.length);
-
 
 	//FIND TOP OU's
 	topNodeFound=0;
@@ -97,65 +125,65 @@ const fetchAllJson = async _ => {
 	console.log("number of tops = " + topOrganUnits.length);
 	console.log("number of OUs remaining = " + organUnitsReduced.length);
 	
-	for (var i = 0; i < 3; i++) {console.log(topOrganUnits[i]);}
+	// for (var i = 0; i < 3; i++) {console.log(topOrganUnits[i]);}
 
-	//find types of top OU
-	allOUtypes=[]		
-	for (var i = 0; i < topOrganUnits.length; i++){
-		allOUtypes.push(topOrganUnits[i].type)
-	}
-	let uniqueOUtypes = [...new Set(allOUtypes)];
-	console.log(uniqueOUtypes)
-
-	//MAKE TREE STRUCTURE RECURSIVELY
-	
-	/*let dummyList = [];
-
-	dummyList.push(topOrganUnits.find(function(element) {
-		return element.href == "/sam/organisationalunits/44c8708d-0993-4ca5-ba7f-c9c4c807cdc5";
-	  }))
-
-	  
-	for (var e = 0; e < 10; e++){
-		dummyList.push(topOrganUnits[e]);
-	}
-*/
 	let childrenFound = 0;
-	let resultArray = [];
+	//let resultArray = [];
 
-	for (var e = 0; e < topOrganUnits.length; e++){
-		findChildrenOfNode(topOrganUnits[e]);
-	}
+	console.log("Writing to file");
 
-
-
-	function findChildrenOfNode(oneNode){
-		console.log(oneNode);
-		resultArray.push(oneNode);
-		for (var x = 0; x < relationships.length; x++){
-			if (oneNode.href == relationships[x].to) {
-				var oneChild = organUnitsReduced.filter(obj => {
-					return obj.href === relationships[x].from
-				  })
-				childrenFound++;
-				//organUnitsReduced = organUnitsReduced.filter(function(value, index, arr){ return value != oneChild;});
-				findChildrenOfNode(oneChild);				
-			}	
-		}	
-	}
-	console.log("children found :" + childrenFound);	
-	console.log("OUs left in array :" + organUnitsReduced.length);
-
-	/*
-	fs.writeFile('ResultFile.txt', resultArray.forEach, function (err) {
+	fs.writeFile("ResultFile.txt", "", function (err) {
 		if (err) return console.log(err);
-  	});
-	*/
+	  });
 
+	const myFileWriter = fs.createWriteStream("ResultFile.txt", { flags: "a" }); // "a" flag stands for "append"
+
+	let indentLevel = 0;
+
+	findChildrenOfNodes(topOrganUnits); 
+
+	function findChildrenOfNodes(oneLevelNodes){
+		var allChilds;
+		var relationshipsFromNode;
+		for (var x = 0; x < oneLevelNodes.length; x++){
+			let indent = ""; 
+			if (x>0 && topOrganUnits.filter(obj => obj.href === oneLevelNodes[x].href).length > 0) {
+				indentLevel=0;
+				myFileWriter.write("----" + "\n");
+			}
+			for (var i=0; i<indentLevel; i++) {indent = indent + "   "};
+			myFileWriter.write(indent + "* href: " + oneLevelNodes[x].href + "\n");
+			myFileWriter.write(indent + "  type: " + oneLevelNodes[x].type + "\n");
+			myFileWriter.write(indent + "  name: " + oneLevelNodes[x].name + "\n");
+			relationshipsFromNode = relationships.filter(obj => {return obj.to === oneLevelNodes[x].href});
+			allChilds = [];
+			for	(var y = 0; y < relationshipsFromNode.length; y++) {
+				const unitFromRelation = organUnitsReduced.find(function(element) {return element.href === relationshipsFromNode[y].from;});
+				allChilds.push(unitFromRelation);								
+			} 			
+			if (allChilds.length>0) {
+				myFileWriter.write(indent + "  parts:" + "\n");
+				indentLevel++;
+				// myFileWriter.write(indent + "* ");
+				findChildrenOfNodes(allChilds);				
+			}
+			else {		
+				for	(var y = 1; y < oneLevelNodes.length; y++) {
+					myFileWriter.write(indent + "* href: " + oneLevelNodes[y].href + "\n");
+					myFileWriter.write(indent + "  type: " + oneLevelNodes[y].type + "\n");
+					myFileWriter.write(indent + "  name: " + oneLevelNodes[y].name + "\n");
+				}
+				indentLevel--;
+				break;
+			}			  
+		}
+	}
+	
+	console.log("Finished writing to file");
 	console.log("End");	
 	var timePassed = new Date() - start
 	console.log('Execution time: %dms', timePassed)
-  }
+}
 
 
 var start = new Date()
