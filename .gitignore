@@ -4,3 +4,6 @@ findChildrenOfNode.js
 writefile.js
 ResultFile.txt
 fetchJsonArray.js
+fetchAllNodesAtOnce.js
+fetchJson 26-05.js
+fetchOnlyOneNode.js
