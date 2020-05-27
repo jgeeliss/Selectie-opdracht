@@ -17,5 +17,14 @@ function chunkArray(myArray, chunk_size){
     return tempArray;
 }
 
+function isEmpty(obj) {
+    for(var key in obj) {
+        if(obj.hasOwnProperty(key))
+            return false;
+    }
+    return true;
+}
+
 exports.setCharAt = setCharAt;
 exports.chunkArray = chunkArray;
+exports.isEmpty = isEmpty;

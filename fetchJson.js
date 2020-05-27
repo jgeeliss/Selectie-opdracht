@@ -22,17 +22,15 @@ let topOrganUnits = [];
 const fetchAllJson = async _ => {
 	console.log('Start')
 
-	function arrayRemove(arr, value) { return arr.filter(function(ele){ return ele != value; });} 
-
 	//DUMMY DATA TO FIX TREE STRUCTURE
-/* 	for (var i = 0; i < 12; i++) { 
+	/* 
+	for (var i = 0; i < 12; i++) { 
 		const OU = new Object();
 		OU.href = "href" + i;
 		OU.type = "type" + i;
 		OU.name = "name" + i;
 		organUnits.push(OU);
 	}
-	organUnits.push({"href":"endStop","type":"endStop","name":"endStop"});
 
 	for (var i = 0; i < 2; i++) { 
 		for (var y = 3; y < 6; y++) { 
@@ -59,8 +57,8 @@ const fetchAllJson = async _ => {
 			rel.to = "href" + i;
 			relationships.push(rel);
 		}
-	} */
-	
+	}
+	 */
 
 	//REAL DATA 
 	let nextResultsUrl= url + "/sam/organisationalunits?limit=5000"
@@ -68,7 +66,7 @@ const fetchAllJson = async _ => {
 	// let nextResultsUrl= url + "/sam/organisationalunits?limit=5000&keyOffset=2018-09-26T12%3A02%3A00.531Z,e4702e9d-d145-4d24-915d-476059de91d3"
 	let nexturl = "";
 
-	
+	//UNITS
  	while (nexturl != undefined) {
 		const jsonUnitObject = await getJson(nextResultsUrl);
 		console.log(jsonUnitObject.results[0].href + " by name " + jsonUnitObject.results[0].$$expanded.$$displayName);
@@ -84,7 +82,7 @@ const fetchAllJson = async _ => {
 		nextResultsUrl =  url + nexturl;
 	}
 
-	nextResultsUrl= url + "/sam/organisationalunits/relations?limit=5000" //?type=IS_PART_OF&limit=5000
+	nextResultsUrl= url + "/sam/organisationalunits/relations?limit=5000&typeIn=IS_PART_OF,IS_MEMBER_OF,GOVERNS" //?type=IS_PART_OF&limit=5000
 	//nextResultsUrl= url + "/sam/organisationalunits/relations?type=IS_PART_OF&limit=5000&keyOffset=2018-10-06T21%3A34%3A07.484Z,1c5ecc04-7045-4863-9129-8a6f323564f4"
 	nexturl = "";
 
@@ -94,39 +92,28 @@ const fetchAllJson = async _ => {
 			
 			for (var i = 0; i < Object.keys(jsonRelationObject.results).length; i++) {
 				const rel = new Object();
-				rel.from = jsonRelationObject.results[i].$$expanded.from.href;
-				rel.to = jsonRelationObject.results[i].$$expanded.to.href;	
-				relationships.push(rel);	
+				if (jsonRelationObject.results[i].$$expanded.type == "GOVERNS") {
+					rel.from = jsonRelationObject.results[i].$$expanded.to.href;
+					rel.to = jsonRelationObject.results[i].$$expanded.from.href;
+				}
+				else {
+					rel.from = jsonRelationObject.results[i].$$expanded.from.href;
+					rel.to = jsonRelationObject.results[i].$$expanded.to.href;	
+				}
+				relationships.push(rel);
 			}
 			nexturl = jsonRelationObject.$$meta.next;		 
 			nextResultsUrl =  url + nexturl;	
 	} 
 
+	//organUnits.push({"href":"endStop","type":"endStop","name":"endStop"});
+
 	console.log("number of OUs: " + organUnits.length);
 	console.log("number of relationships: " + relationships.length);
 
-	//FIND TOP OU's	
-	let organUnitsReduced = organUnits;
-	let relationsFroms = relationships.map(a => a.from);
-	// let organUnitsHrefs = organUnits.map(a => a.href);
-	// let relationsFromUniques = [...new Set(relationsFroms)];
-	// let topOrganUnitsHrefs = organUnitsHrefs.filter(e => !relationsFroms.includes(e))
-	// console.log("top hrefs = " + topOrganUnitsHrefs.length);
 
-	for (var i = 0; i < organUnits.length; i++){
-		if (i%1000==0){console.log("checked " + check/1000 + " thousand OUs for tops");}
-		if (organUnits[i].type=="CLASS") {continue;}	//Classes can never be top => performance
-		if (relationsFroms.indexOf(organUnits[i].href)>=0) {continue;}	
-		topOrganUnits.push(organUnits[i]);
-		organUnitsReduced = organUnitsReduced.filter(function(value, index, arr){ return value != organUnits[i];}); //remove top OUs from array
-	}
-	
-	// topOrganUnitsHrefs = topOrganUnits.map(a => a.href);
-	// organUnits = []; //emptied, continue with organUnitsReduced
-	console.log("number of tops = " + topOrganUnits.length);
-	console.log("number of OUs remaining = " + organUnitsReduced.length);
-	console.log("number of OUs = " + organUnits.length);
-	
+	//FIND TOP OU's	
+
 	console.log("Writing to file");
 
 	fs.writeFile("ResultFile.txt", "", function (err) {if (err) return console.log(err);});
@@ -134,93 +121,50 @@ const fetchAllJson = async _ => {
 	const myFileWriter = fs.createWriteStream("ResultFile.txt", { flags: "a"}); //  "a" flag stands for "append"
 
 	let indentLevel = 0;
-	let allChilds;
 	let relationshipsFromNode;
 
-	// let chunkedArray;
-	
-	// chunkedArray = utilities.chunkArray(topOrganUnits,100); 
-	// for (var i=0; i<chunkedArray.length; i++) { //chunkedArray.length
-		// indentLevel=0;
-		// findChildrenOfNodes(chunkedArray[i]	); 
-		// myFileWriter.write("----" + "\n");
-	// }
+	// OPTIE MET STRINGS:
+	const relationsFroms = relationships.map(a => a.from);
+	const organUnitsHrefs = organUnits.map(a => a.href); 
+	const organUnitsTypes = organUnits.map(a => a.type); 
+	const organUnitsNames = organUnits.map(a => a.name); 
+	const topOrganUnitsHrefs = organUnitsHrefs.filter(e => !relationsFroms.includes(e));
+	console.log("number of tops = " + topOrganUnitsHrefs.length);
+	console.log("number of froms = " + relationsFroms.length);
 
- 	findChildrenOfNodes(topOrganUnits);
+	findChildrenOfNodes(topOrganUnitsHrefs);
+
+	console.log("Building tree");
+
 
 	function findChildrenOfNodes(oneLevelNodes){
 		for (var x = 0; x < oneLevelNodes.length; x++){
 			let indent = ""; 
-			if (x>0 && topOrganUnits.filter(obj => obj.href == oneLevelNodes[x].href).length > 0) {
+			if (x>0 && !utilities.isEmpty(topOrganUnitsHrefs.find(a => a == oneLevelNodes[x]))) {   //=> CALC CRASHES HERE, LENGTH OF UNDEFINED, ADDED isEmpty func
 				indentLevel=0;
 				myFileWriter.write("----" + "\n");
 			}
+			// const node = organUnits.find(obj => obj.href == oneLevelNodes[x]); // hier foutmelding op href of undefined!!
+			indexOfNode = organUnitsHrefs.indexOf(oneLevelNodes[x]);
 			for (var i=0; i<indentLevel; i++) {indent = indent + "   "};
-			myFileWriter.write(indent + "* href: " + oneLevelNodes[x].href + "\n");
-			myFileWriter.write(indent + "  type: " + oneLevelNodes[x].type + "\n");
-			myFileWriter.write(indent + "  name: " + oneLevelNodes[x].name + "\n");
-			relationshipsFromNode = relationships.filter(function(obj) {return obj.to == oneLevelNodes[x].href;});
-			// filter(obj => {return obj.to == oneLevelNodes[x].href}); WORKS ALSO?
-			allChilds = [];
-			for	(var y = 0; y < relationshipsFromNode.length; y++) {
-				const unitFromRelation = organUnitsReduced.find(function(element) {return element.href == relationshipsFromNode[y].from;});
-				allChilds.push(unitFromRelation);								
-			} 			
+			myFileWriter.write(indent + "* href: " + oneLevelNodes[x] + "\n"); // ipv node.href
+			myFileWriter.write(indent + "  type: " + organUnitsTypes[indexOfNode] + "\n");
+			myFileWriter.write(indent + "  name: " + organUnitsNames[indexOfNode] + "\n");
+			relationshipsFromNode = relationships.filter(obj =>  obj.to == oneLevelNodes[x]);
+			const allChilds = relationshipsFromNode.map(a => a.from);								
+			// } 			
 			if (allChilds.length>0) {
 				myFileWriter.write(indent + "  parts:" + "\n");
 				indentLevel++;
-				findChildrenOfNodes(allChilds);				
+				findChildrenOfNodes(allChilds);
 			}
 			else {
-				if (x == oneLevelNodes.length - 1)	{indentLevel--;}	//Last node of level => drop one level
+				if (x == oneLevelNodes.length - 1)	{indentLevel--;}	//Last node of level, drop one level	
 			}			  
 		}
 	}
 
-	// OPTIE MET STRINGS + APPEND:
 
-	/* let organUnitsOrganized = [];
-	let stringedNodes = "";
-
-	findChildrenOfNodes(topOrganUnits);
-
-	function findChildrenOfNodes(oneLevelNodes){
-		for (var x = 0; x < oneLevelNodes.length; x++){
-			let indent = ""; 
-			if ((x>0 && topOrganUnits.filter(obj => obj.href == oneLevelNodes[x].href).length > 0) ) {
-				//WRITE STRING TO FILE AND RESET STRING
-				stringedNodes = stringedNodes + "----" + "\n";
-				// myFileWriter.write("ResultFile.txt", stringedNodes, function (err) {if (err) return console.log(err);},{ encoding: "UTF8"});
-				fs.appendFile("ResultFile.txt", stringedNodes, function (err) {if (err) throw err;console.log('Saved!');});
-				indentLevel=0;
-				stringedNodes = "";
-			}
-			for (var i=0; i<indentLevel; i++) {indent = indent + "   "};
-			// organUnitsOrganized.push();
-			stringedNodes = stringedNodes + indent + "* href: " + oneLevelNodes[x].href + "\n";
-			stringedNodes = stringedNodes + indent + "  type: " + oneLevelNodes[x].type + "\n";
-			stringedNodes = stringedNodes + indent + "  name: " + oneLevelNodes[x].name + "\n";
-			// myFileWriter.write(indent + "* href: " + oneLevelNodes[x].href + "\n");
-			// myFileWriter.write(indent + "  type: " + oneLevelNodes[x].type + "\n");
-			// myFileWriter.write(indent + "  name: " + oneLevelNodes[x].name + "\n");
-			relationshipsFromNode = relationships.filter(function(obj) {return obj.to == oneLevelNodes[x].href;});
-			allChilds = [];
-			for	(var y = 0; y < relationshipsFromNode.length; y++) {
-				const unitFromRelation = organUnitsReduced.find(function(element) {return element.href == relationshipsFromNode[y].from;});
-				allChilds.push(unitFromRelation);								
-			} 			
-			if (allChilds.length>0) {
-				// fs.appendFile("ResultFile.txt",indent + "  parts:" + "\n", (err) => {if (err) throw err; console.log('The lyrics were updated!');});
-				stringedNodes = stringedNodes + indent + "  parts:" + "\n";
-				// myFileWriter.write(indent + "  parts:" + "\n");
-				indentLevel++;
-				findChildrenOfNodes(allChilds); 
-			}
-			else {
-				if (x == oneLevelNodes.length - 1)	{indentLevel--;}	//Last node of level => drop one level
-			}			  
-		}
-	} */
 	
 	myFileWriter.end();
 	console.log("Finished writing to file");
