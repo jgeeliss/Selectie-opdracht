@@ -25,6 +25,10 @@ function isEmpty(obj) {
     return true;
 }
 
+function arrayRemove(arr, value) { 
+    return arr.filter(function(ele){ return ele != value; });} 
+
+
 exports.setCharAt = setCharAt;
 exports.chunkArray = chunkArray;
 exports.isEmpty = isEmpty;
