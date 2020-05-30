@@ -4,7 +4,7 @@
   "description": "Selectie opdracht KOV",
   "main": "fetchJson.js",
   "scripts": {
-    "start": "node fetchJson.js",
+    "start": "node CreateOrgTree.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

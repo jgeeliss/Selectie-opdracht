@@ -25,11 +25,11 @@ let relationsMembersParents = [];
 let relationsGovernsChildren = [];
 let relationsGovernsParents = [];
 let topOrganUnitsHrefs = [];
-let indentLevel = 0;
 const myFileWriter = fs.createWriteStream("ResultFileSync.txt", { flags: "a"}); //  "a" flag stands for "append"
 
-const fetchAllJson = async _ => {
-// function fetchAllJson () {
+// const fetchAllJson = async _ => {
+async function fetchAllJson () {
+// async function fetchAllJson (callback) {
 	console.log('Start')
 
 	var start = new Date()
@@ -37,33 +37,40 @@ const fetchAllJson = async _ => {
 
 	{
 	//DUMMY DATA TO FIX TREE STRUCTURE
-	/* for (var i = 0; i < 12; i++) { 
+/* 	for (var i = 0; i < 30; i++) { 
 		organUnitsHrefs.push("href" + i);
 		organUnitsTypes.push("type" + i);
 		organUnitsNames.push("name" + i);
 	}
 
-	for (var i = 0; i < 2; i++) { 
-		for (var y = 3; y < 6; y++) { 
+	for (var i = 1; i < 8; i++) { 
+		for (var y = 11; y < 14; y++) { 
 			relationsGovernsChildren.push("href" + y);
 			relationsGovernsParents.push("href" + i);
 		}
 	}
 
-	for (var i = 4; i < 6; i++) { 
-		for (var y = 6; y < 9; y++) { 
+	for (var i = 1; i < 8; i++) { 
+		for (var y = 14; y < 19; y++) { 
+			relationsPartsChildren.push("href" + y);
+			relationsPartsParents.push("href" + i);
+		}
+	}
+
+	for (var i = 13; i < 18; i++) { 
+		for (var y = 22; y < 25; y++) { 
 			relationsMembersChildren.push("href" + y);
 			relationsMembersParents.push("href" + i);
 		}
 	}
 
-	for (var i = 6; i < 7; i++) { 
-		for (var y = 10; y < 12; y++) { 
+	for (var i = 11; i < 16; i++) { 
+		for (var y = 25; y < 30; y++) { 
 			relationsPartsChildren.push("href" + y);
 			relationsPartsParents.push("href" + i);
 		}
 	}*/
-} 
+}  
 
 	//FETCH DATA 
 	let nextResultsUrl= url + "/sam/organisationalunits?limit=5000"
@@ -106,7 +113,7 @@ const fetchAllJson = async _ => {
 				relationsMembersParents.push(jsonRelationObject.results[i].$$expanded.to.href);
 		}
 		nexturl = jsonRelationObject.$$meta.next;		 
-		nextResultsUrl =  url + nexturl;	
+		nextResultsUrl =  url + nexturl;
 } 
 
 	nextResultsUrl= url + "/sam/organisationalunits/relations?limit=5000&typeIn=GOVERNS" 
@@ -121,7 +128,7 @@ const fetchAllJson = async _ => {
 			}
 			nexturl = jsonRelationObject.$$meta.next;		 
 			nextResultsUrl =  url + nexturl;	
-	} 
+	}  
 
 	const relationsChildren = relationsPartsChildren.concat(relationsMembersChildren, relationsGovernsChildren);
 	// const relationsParents = relationsPartsParents.concat(relationsMembersParents, relationsGovernsParents);
@@ -132,6 +139,7 @@ const fetchAllJson = async _ => {
 	start = new Date()
 
 	//FIND TOP OU's	
+	console.log("Searching for top OUs");
 	for (var i = 0 ; i < organUnitsHrefs.length; i++ ) {
 		if(organUnitsTypes[i] != "CLASS") {
 			topOrganUnitsHrefs.push(organUnitsHrefs[i]);
@@ -146,11 +154,14 @@ const fetchAllJson = async _ => {
 
 	//BUILD TREE
 	console.log("Building tree & writing to file");
-	fs.writeFile("ResultFileSync.txt", "", function (err) {if (err) return console.log(err);});
+	fs.writeFile("ResultFile.txt", "", function (err) {if (err) return console.log(err);});
 	let relationshipsFromNode;
 	// let stringedNodes = "";
-
-	findChildrenOfNodes(topOrganUnitsHrefs);
+	
+	topOrganUnitsHrefs.forEach(findChildrenOfNodes,0);
+	// let lastIndexList = topOrganUnitsHrefs.length-1;
+	// findChildrenOfNodes(topOrganUnitsHrefs,0);
+	// callback(topOrganUnitsHrefs);
 
 	myFileWriter.end();
 	console.log("Finished writing to file");
@@ -161,57 +172,65 @@ const fetchAllJson = async _ => {
 	console.log('Execution time Total: %dms', timePassedAll)
 }
 
+// let indent = ""; 
+let indentLevel = 0; 
+
 function findChildrenOfNodes(oneLevelNodes){
-	for (var x = 0; x < oneLevelNodes.length; x++){
 		let indent = ""; 
-		if (x>0 && !utilities.isEmpty(topOrganUnitsHrefs.find(a => a == oneLevelNodes[x]))) {   //=> CALC CRASHED HERE, LENGTH OF UNDEFINED, ADDED isEmpty func
+		if (topOrganUnitsHrefs.indexOf(oneLevelNodes)>0 && !utilities.isEmpty(topOrganUnitsHrefs.find(a => a == oneLevelNodes))) {   //=> CALC CRASHED HERE, LENGTH OF UNDEFINED, ADDED isEmpty func
 			indentLevel=0;
 			myFileWriter.write("----" + "\n");
 		}
-		const indexOfNode = organUnitsHrefs.indexOf(oneLevelNodes[x]);
+		const indexOfNode = organUnitsHrefs.indexOf(oneLevelNodes);
 		for (var i=0; i<indentLevel; i++) {indent = indent + "   "};
-		myFileWriter.write(indent + "* href: " + oneLevelNodes[x] + "\n"); // ipv node.href
+		myFileWriter.write(indent + "* href: " + oneLevelNodes + "\n"); // ipv node.href
 		myFileWriter.write(indent + "  type: " + organUnitsTypes[indexOfNode] + "\n");
 		myFileWriter.write(indent + "  name: " + organUnitsNames[indexOfNode] + "\n");
+		let AllChildren = [];								
 		let AllParts = [];								
 		for (var i = 0; i < relationsPartsParents.length; i++) {
-			if (relationsPartsParents[i] == oneLevelNodes[x]) {
+			if (relationsPartsParents[i] == oneLevelNodes) {
 				AllParts.push(relationsPartsChildren[i]);
 			}
 		}
 		let AllMembers = [];								
 		for (var i = 0; i < relationsMembersParents.length; i++) {
-			if (relationsMembersParents[i] == oneLevelNodes[x]) {
+			if (relationsMembersParents[i] == oneLevelNodes) {
 				AllMembers.push(relationsMembersChildren[i]);
 			}
 		}
 		let AllGoverns = [];								
 		for (var i = 0; i < relationsGovernsParents.length; i++) {
-			if (relationsGovernsParents[i] == oneLevelNodes[x]) {
+			if (relationsGovernsParents[i] == oneLevelNodes) {
 				AllGoverns.push(relationsGovernsChildren[i]);
 			}
 		}
-		if (AllParts.length>0) {
-			myFileWriter.write(indent + "  parts:" + "\n");
-			indentLevel++;
-			findChildrenOfNodes(AllParts);
-		}
-		else {
+		AllChildren = AllParts.concat(AllMembers,AllGoverns);
+		lastIteminList =  AllChildren[AllChildren.length-1];
+		if (AllChildren.length > 0 ) {
+			if (AllParts.length>0) {
+				myFileWriter.write(indent + "  parts:" + "\n");
+				indentLevel++;
+				AllParts.forEach(findChildrenOfNodes);
+				indentLevel--;
+			}
 			if (AllMembers.length>0) {
+				indent=""
+				for (var i=0; i<indentLevel; i++) {indent = indent + "   "};
 				myFileWriter.write(indent + "  members:" + "\n");
 				indentLevel++;
-				findChildrenOfNodes(AllMembers);
+				AllMembers.forEach(findChildrenOfNodes);
+				indentLevel--;
 			}
-			else {
-				if (AllGoverns.length>0) {
-					myFileWriter.write(indent + "  governs:" + "\n");
-					indentLevel++;
-					findChildrenOfNodes(AllGoverns);
-				}
-				else { if (x == oneLevelNodes.length - 1)	{indentLevel--;} }	//Last node of level, drop one level	
+			if (AllGoverns.length>0) {
+				indent=""
+				for (var i=0; i<indentLevel; i++) {indent = indent + "   "};
+				myFileWriter.write(indent + "  governedOrganisations:" + "\n");
+				indentLevel++;
+				AllGoverns.forEach(findChildrenOfNodes);
+				indentLevel--;
 			}
 		}
-	}
 }
 
 fetchAllJson();
