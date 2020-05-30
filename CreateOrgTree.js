@@ -25,7 +25,7 @@ let relationsMembersParents = [];
 let relationsGovernsChildren = [];
 let relationsGovernsParents = [];
 let topOrganUnitsHrefs = [];
-const myFileWriter = fs.createWriteStream("ResultFileSync.txt", { flags: "a"}); //  "a" flag stands for "append"
+const myFileWriter = fs.createWriteStream("ResultFile.txt", { flags: "a"}); //  "a" flag stands for "append"
 
 // const fetchAllJson = async _ => {
 async function fetchAllJson () {
