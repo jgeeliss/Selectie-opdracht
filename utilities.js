@@ -25,10 +25,18 @@ function isEmpty(obj) {
     return true;
 }
 
+function arrayDelete(array, element) {
+    const index = array.indexOf(element);
+    if (index !== -1) {
+      array.splice(index, 1);
+    }
+  }
+
 function arrayRemove(arr, value) { 
     return arr.filter(function(ele){ return ele != value; });} 
-
 
 exports.setCharAt = setCharAt;
 exports.chunkArray = chunkArray;
 exports.isEmpty = isEmpty;
+exports.arrayRemove = arrayRemove;
+exports.arrayDelete = arrayDelete;

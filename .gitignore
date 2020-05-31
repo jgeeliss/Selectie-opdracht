@@ -1,16 +1,5 @@
 *.conf
 *.txt
-https.js
-findChildrenOfNode.js
-writefile.js
-fetchJsonArray.js
-fetchAllNodesAtOnce.js
-fetchJson 26-05.js
-fetchOnlyOneNode.js
-fetchJson 27-05.js
-version with arrays straight from json.js
-working version with arrays 27-05.js
-working version with arrays only 28-05.js
-working version with strings and 1 write 28-05.js
-testtemplate.js
-working version with tree 30-05.js
+*.js
+!CreateOrgTree.js
+
