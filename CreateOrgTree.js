@@ -1,136 +1,128 @@
 "use strict";
 const fs = require("fs");
 const utilities = require("./utilities");
-const beep = require('beepbeep')
+const beep = require("beepbeep")
 
 Main();
-
 async function Main() {
-
-	let organUnits = [];
-	let topOrganUnits = [];
-	let relationsChildren = [];
+	console.log("Start")
 	const startAll = new Date()
+	let children = [];
 
-	await fetchAllJson();
+	const organUnits = await fetchAllJson();
 	async function fetchAllJson() {
-
-		console.log('Start')
-		console.log("Fetching data...");
-
+		console.log("Fetching config...");
 		const start = new Date()
 
-		let url;
+		let linesFromConfig = [];
 		try {
-			url = fs.readFileSync('./url.conf', 'utf8');
-		} catch (e) {
-			console.log('Error:', e.stack);
+			const data = fs.readFileSync("./url.conf", "UTF-8");
+			linesFromConfig = data.split(/\r?\n/);
+		} catch (err) {
+			console.error(err);
 		}
+		const urlBase = linesFromConfig[0];
+		let urlOU = linesFromConfig[1];
+		let urlRel = linesFromConfig[2];
+		let units = [];
 
 		{
 			//DUMMY DATA TO FIX TREE STRUCTURE
-			/* for (let i = 0; i < 30; i++) {
-				const OU = new Object();
-				OU.href = "href" + i;
-				OU.type = "type" + i;
-				OU.name = "name" + i;
-				OU.governs = [];
-				OU.parts = [];
-				OU.members = [];
-				organUnits.push(OU);
-			}
-
-			for (let i = 1; i < 8; i++) {
-				for (let y = 11; y < 14; y++) {
-					organUnits[organUnits.findIndex(el => el.href == "href" + i)].governs.push("href" + y);
-					relationsChildren.push("href" + y);
+			/* 	for (let i = 0; i < 30; i++) {
+					const OU = new Object();
+					OU.href = "href" + i;
+					OU.type = "type" + i;
+					OU.name = "name" + i;
+					OU.governs = [];
+					OU.parts = [];
+					OU.members = [];
+					units.push(OU);
 				}
-			}
-
-			for (let i = 1; i < 8; i++) {
-				for (let y = 14; y < 19; y++) {
-					organUnits[organUnits.findIndex(el => el.href == "href" + i)].parts.push("href" + y);
-					relationsChildren.push("href" + y);
+	
+				for (let i = 1; i < 8; i++) {
+					for (let y = 11; y < 14; y++) {
+						units[units.findIndex(el => el.href == "href" + i)].governs.push("href" + y);
+						children.push("href" + y);
+					}
 				}
-			}
-
-			for (let i = 13; i < 18; i++) {
-				for (let y = 22; y < 25; y++) {
-					organUnits[organUnits.findIndex(el => el.href == "href" + i)].members.push("href" + y);
-					relationsChildren.push("href" + y);
+	
+				for (let i = 1; i < 8; i++) {
+					for (let y = 14; y < 19; y++) {
+						units[units.findIndex(el => el.href == "href" + i)].parts.push("href" + y);
+						children.push("href" + y);
+					}
 				}
-			}
-
-			for (let i = 11; i < 16; i++) {
-				for (let y = 25; y < 30; y++) {
-					organUnits[organUnits.findIndex(el => el.href == "href" + i)].parts.push("href" + y);
-					relationsChildren.push("href" + y);
+	
+				for (let i = 13; i < 18; i++) {
+					for (let y = 22; y < 25; y++) {
+						units[units.findIndex(el => el.href == "href" + i)].members.push("href" + y);
+						children.push("href" + y);
+					}
 				}
-			} */
+	
+				for (let i = 11; i < 16; i++) {
+					for (let y = 25; y < 30; y++) {
+						units[units.findIndex(el => el.href == "href" + i)].parts.push("href" + y);
+						children.push("href" + y);
+					}
+				} */
 		}
 
 		console.log("Fetching OUs...");
-		let nextResultsUrl = url + "/sam/organisationalunits?limit=5000"
-		let nexturl = "";
-		while (nexturl != undefined) {
-			const jsonUnitObject = await utilities.getJson(nextResultsUrl);
-
-			for (let i = 0; i < Object.keys(jsonUnitObject.results).length; i++) {
-				const OU = new Object();
+		while (urlOU != undefined) {
+			const jsonUnitObject = await utilities.getJson(urlBase + urlOU);
+			for (let i = 0; i < jsonUnitObject.results.length; i++) {
+				const OU = {};
 				OU.href = jsonUnitObject.results[i].href;
 				OU.type = jsonUnitObject.results[i].$$expanded.type;
 				OU.name = jsonUnitObject.results[i].$$expanded.$$displayName;
 				OU.governs = [];
 				OU.parts = [];
 				OU.members = [];
-				organUnits.push(OU);
+				units.push(OU);
 			}
-			nexturl = jsonUnitObject.$$meta.next;
-			nextResultsUrl = url + nexturl;
+			urlOU = jsonUnitObject.$$meta.next;
 		}
 
 		console.log("Fetching relationships...");
-		nextResultsUrl = url + "/sam/organisationalunits/relations?limit=5000&typeIn=IS_PART_OF,IS_MEMBER_OF,GOVERNS"
-		nexturl = "";
-		while (nexturl != undefined) {
-			const jsonRelationObject = await utilities.getJson(nextResultsUrl);
-			const jsonString = JSON.stringify(jsonRelationObject);
-			for (let i = 0; i < Object.keys(jsonRelationObject.results).length; i++) {
+		while (urlRel != undefined) {
+			const jsonRelationObject = await utilities.getJson(urlBase + urlRel);
+			for (let i = 0; i < jsonRelationObject.results.length; i++) {
 				switch (jsonRelationObject.results[i].$$expanded.type) {
 					case "IS_PART_OF":
-						organUnits[organUnits.findIndex(el => el.href == jsonRelationObject.results[i].$$expanded.to.href)].parts.push(jsonRelationObject.results[i].$$expanded.from.href);
-						relationsChildren.push(jsonRelationObject.results[i].$$expanded.from.href);
+						units[units.findIndex(el => el.href == jsonRelationObject.results[i].$$expanded.to.href)].parts.push(jsonRelationObject.results[i].$$expanded.from.href);
+						children.push(jsonRelationObject.results[i].$$expanded.from.href);
 						break;
 					case "IS_MEMBER_OF":
-						organUnits[organUnits.findIndex(el => el.href == jsonRelationObject.results[i].$$expanded.to.href)].members.push(jsonRelationObject.results[i].$$expanded.from.href);
-						relationsChildren.push(jsonRelationObject.results[i].$$expanded.from.href);
+						units[units.findIndex(el => el.href == jsonRelationObject.results[i].$$expanded.to.href)].members.push(jsonRelationObject.results[i].$$expanded.from.href);
+						children.push(jsonRelationObject.results[i].$$expanded.from.href);
 						break;
 					case "GOVERNS":
-						organUnits[organUnits.findIndex(el => el.href == jsonRelationObject.results[i].$$expanded.from.href)].governs.push(jsonRelationObject.results[i].$$expanded.to.href);
-						relationsChildren.push(jsonRelationObject.results[i].$$expanded.to.href);
+						units[units.findIndex(el => el.href == jsonRelationObject.results[i].$$expanded.from.href)].governs.push(jsonRelationObject.results[i].$$expanded.to.href);
+						children.push(jsonRelationObject.results[i].$$expanded.to.href);
 				}
 			}
-			nexturl = jsonRelationObject.$$meta.next;
-			nextResultsUrl = url + nexturl;
+			urlRel = jsonRelationObject.$$meta.next;
 		}
 
-		console.log("- number of OUs: " + organUnits.length);
-		console.log("- number of relationships: " + relationsChildren.length);
+		console.log("- number of OUs: " + units.length);
+		console.log("- number of relationships: " + children.length);
 		let timePassed = new Date() - start;
-		console.log('Execution time fetch: %dms', timePassed);
-
+		console.log("Execution time fetch: %dms", timePassed);
+		return units;
 	}
 
-	findTopOUs();
+	const topOrganUnits = findTopOUs();
 	function findTopOUs() {
 		const start = new Date()
 		console.log("Searching for top OUs...");
-		topOrganUnits = organUnits.filter(e => e.type != "CLASS");
-		topOrganUnits = topOrganUnits.filter(e => !relationsChildren.includes(e.href));
-		console.log("- number of tops = " + topOrganUnits.length);
+		let top = organUnits.filter(e => e.type != "CLASS");
+		top = top.filter(e => !children.includes(e.href));
+		console.log("- number of tops = " + top.length);
 
 		const timePassed = new Date() - start
-		console.log('Execution time top: %dms', timePassed)
+		console.log("Execution time top: %dms", timePassed)
+		return top;
 	}
 
 	buildTree();
@@ -138,8 +130,8 @@ async function Main() {
 		let indentLevel = 0;
 
 		console.log("Building tree & writing to file...");
-		fs.writeFile("ResultFileTest3.txt", "", function (err) { if (err) return console.log(err); }); //create new file
-		const myFileWriter = fs.createWriteStream("ResultFileTest3.txt", { flags: "a" }); //  "a" flag stands for "append"
+		fs.writeFile("ResultFile.txt", "", function (err) { if (err) return console.log(err); }); //create new file
+		const myFileWriter = fs.createWriteStream("ResultFile.txt", { flags: "a" }); //  "a" flag stands for "append"
 
 		const start = new Date()
 		topOrganUnits.forEach(findChildrenOfNode);
@@ -176,13 +168,14 @@ async function Main() {
 				myFileWriter.write("----\n");
 			}
 		}
+		myFileWriter.end();
 		const timePassed = new Date() - start;
-		console.log('Execution time Write: %dms', timePassed);
+		console.log("Execution time Write: %dms", timePassed);
 	}
 
 	console.log("End");
 	const timePassedTotal = new Date() - startAll
-	console.log('Execution time Total: %dms', timePassedTotal)
+	console.log("Execution time Total: %dms", timePassedTotal)
 	beep(3, 1000);
 }
 
