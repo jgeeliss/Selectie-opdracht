@@ -26,48 +26,6 @@ async function Main() {
 		let urlRel = linesFromConfig[2];
 		let units = [];
 
-		{
-			//DUMMY DATA TO FIX TREE STRUCTURE
-			/* 	for (let i = 0; i < 30; i++) {
-					const OU = new Object();
-					OU.href = "href" + i;
-					OU.type = "type" + i;
-					OU.name = "name" + i;
-					OU.governs = [];
-					OU.parts = [];
-					OU.members = [];
-					units.push(OU);
-				}
-	
-				for (let i = 1; i < 8; i++) {
-					for (let y = 11; y < 14; y++) {
-						units[units.findIndex(el => el.href == "href" + i)].governs.push("href" + y);
-						children.push("href" + y);
-					}
-				}
-	
-				for (let i = 1; i < 8; i++) {
-					for (let y = 14; y < 19; y++) {
-						units[units.findIndex(el => el.href == "href" + i)].parts.push("href" + y);
-						children.push("href" + y);
-					}
-				}
-	
-				for (let i = 13; i < 18; i++) {
-					for (let y = 22; y < 25; y++) {
-						units[units.findIndex(el => el.href == "href" + i)].members.push("href" + y);
-						children.push("href" + y);
-					}
-				}
-	
-				for (let i = 11; i < 16; i++) {
-					for (let y = 25; y < 30; y++) {
-						units[units.findIndex(el => el.href == "href" + i)].parts.push("href" + y);
-						children.push("href" + y);
-					}
-				} */
-		}
-
 		console.log("Fetching OUs...");
 		while (urlOU != undefined) {
 			const jsonUnitObject = await utilities.getJson(urlBase + urlOU);
