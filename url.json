@@ -1,0 +1,5 @@
+{
+    "urlApi": "https://api.katholiekonderwijs.vlaanderen",
+    "urlUnits": "/sam/organisationalunits?limit=5000",
+    "urlRelations": "/sam/organisationalunits/relations?limit=5000&typeIn=IS_PART_OF,IS_MEMBER_OF,GOVERNS"
+}

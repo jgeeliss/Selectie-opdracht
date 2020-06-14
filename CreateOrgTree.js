@@ -2,33 +2,23 @@
 const fs = require("fs");
 const utilities = require("./utilities");
 const beep = require("beepbeep")
+const urls = require("./url.json")
 
 Main();
 async function Main() {
 	console.log("Start")
 	const startAll = new Date()
-	let children = [];
-
-	const organUnits = await fetchAllJson();
-	async function fetchAllJson() {
+	let organUnits = await fetchAllUnits();
+	
+	async function fetchAllUnits() {
 		console.log("Fetching config...");
 		const start = new Date()
 
-		let linesFromConfig = [];
-		try {
-			const data = fs.readFileSync("./url.conf", "UTF-8");
-			linesFromConfig = data.split(/\r?\n/);
-		} catch (err) {
-			console.error(err);
-		}
-		const urlBase = linesFromConfig[0];
-		let urlOU = linesFromConfig[1];
-		let urlRel = linesFromConfig[2];
 		let units = [];
 
 		console.log("Fetching OUs...");
-		while (urlOU != undefined) {
-			const jsonUnitObject = await utilities.getJson(urlBase + urlOU);
+		while (urls.urlUnits != undefined) {
+			const jsonUnitObject = await utilities.getJson(urls.urlApi + urls.urlUnits);
 			for (let i = 0; i < jsonUnitObject.results.length; i++) {
 				const OU = {};
 				OU.href = jsonUnitObject.results[i].href;
@@ -39,43 +29,68 @@ async function Main() {
 				OU.members = [];
 				units.push(OU);
 			}
-			urlOU = jsonUnitObject.$$meta.next;
+			urls.urlUnits = jsonUnitObject.$$meta.next;
 		}
+		console.log("- number of OUs: " + units.length);
+		const timePassed = new Date() - start;
+		console.log("Execution time fetch units: %dms", timePassed);
+		return units;
+	}
 
+	await fetchAllRelations()
+	async function fetchAllRelations() {
+		const start = new Date()
 		console.log("Fetching relationships...");
-		while (urlRel != undefined) {
-			const jsonRelationObject = await utilities.getJson(urlBase + urlRel);
+		while (urls.urlRelations != undefined) {
+			const jsonRelationObject = await utilities.getJson(urls.urlApi + urls.urlRelations);
 			for (let i = 0; i < jsonRelationObject.results.length; i++) {
 				switch (jsonRelationObject.results[i].$$expanded.type) {
 					case "IS_PART_OF":
-						units[units.findIndex(el => el.href == jsonRelationObject.results[i].$$expanded.to.href)].parts.push(jsonRelationObject.results[i].$$expanded.from.href);
-						children.push(jsonRelationObject.results[i].$$expanded.from.href);
+						organUnits[organUnits.findIndex(el => el.href == jsonRelationObject.results[i].$$expanded.to.href)].parts.push(jsonRelationObject.results[i].$$expanded.from.href);
 						break;
 					case "IS_MEMBER_OF":
-						units[units.findIndex(el => el.href == jsonRelationObject.results[i].$$expanded.to.href)].members.push(jsonRelationObject.results[i].$$expanded.from.href);
-						children.push(jsonRelationObject.results[i].$$expanded.from.href);
+						organUnits[organUnits.findIndex(el => el.href == jsonRelationObject.results[i].$$expanded.to.href)].members.push(jsonRelationObject.results[i].$$expanded.from.href);
 						break;
 					case "GOVERNS":
-						units[units.findIndex(el => el.href == jsonRelationObject.results[i].$$expanded.from.href)].governs.push(jsonRelationObject.results[i].$$expanded.to.href);
-						children.push(jsonRelationObject.results[i].$$expanded.to.href);
+						organUnits[organUnits.findIndex(el => el.href == jsonRelationObject.results[i].$$expanded.from.href)].governs.push(jsonRelationObject.results[i].$$expanded.to.href);
 				}
 			}
-			urlRel = jsonRelationObject.$$meta.next;
+			urls.urlRelations = jsonRelationObject.$$meta.next;
 		}
 
-		console.log("- number of OUs: " + units.length);
-		console.log("- number of relationships: " + children.length);
-		let timePassed = new Date() - start;
-		console.log("Execution time fetch: %dms", timePassed);
-		return units;
+		const timePassed = new Date() - start;
+		console.log("Execution time fetch relations: %dms", timePassed);
+	}
+
+	const children = listChildren()
+	function listChildren()
+	{
+		const start = new Date()
+		let listOfChildren = []
+		// organUnits.forEach(element => {listOfChildren = listOfChildren.concat(element.governs,element.parts,element.members)});
+		for(let i in organUnits) {
+			listOfChildren = listOfChildren.concat(organUnits[i].governs,organUnits[i].parts,organUnits[i].members)
+		}
+		console.log("- number of children: " + listOfChildren.length)
+		const timePassed = new Date() - start;
+		console.log("Execution time find children: %dms", timePassed);
+		return listOfChildren
 	}
 
 	const topOrganUnits = findTopOUs();
 	function findTopOUs() {
 		const start = new Date()
 		console.log("Searching for top OUs...");
-		let top = organUnits.filter(e => e.type != "CLASS");
-		top = top.filter(e => !children.includes(e.href));
+
+		//mijn methode zoekt in array, duurt lang
+		// let top = organUnits.filter(e => e.type != "CLASS");
+		// top = top.filter(e => !children.includes(e.href));
+
+		//Frederik zet mijn array om in een object
+		const childrenMap = {}
+		children.forEach(c => childrenMap[c] = true)
+		let top = organUnits.filter(e => !childrenMap[e.href]);
+
 		console.log("- number of tops = " + top.length);
 
 		const timePassed = new Date() - start
