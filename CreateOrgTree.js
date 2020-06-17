@@ -8,8 +8,8 @@ Main();
 async function Main() {
 	console.log("Start")
 	const startAll = new Date()
-	let organUnits = await fetchAllUnits();
 	
+	let organUnits = await fetchAllUnits();
 	async function fetchAllUnits() {
 		console.log("Fetching config...");
 		const start = new Date()
@@ -151,4 +151,5 @@ async function Main() {
 	console.log("Execution time Total: %dms", timePassedTotal)
 	beep(3, 1000);
 }
+
 
